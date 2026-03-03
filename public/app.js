@@ -26,13 +26,25 @@ document.getElementById('searchBtn').addEventListener('click', () => {
   function displayRecipes(recipes) {
     const list = document.getElementById('recipesList');
     list.innerHTML = '';
-  
-    recipes.forEach(r => {
-      const card = document.createElement('div');
-      card.className = 'recipe-item';
-      card.textContent = r.name;
-      card.addEventListener('click', () => handleDishClick(r.name, r.missingIngredients || []));
-      list.appendChild(card);
+
+    recipes.forEach((r, index) => {
+        const card = document.createElement('div');
+        card.className = 'recipe-item';
+        card.textContent = r.name;
+        
+        // Add a fade-in effect via inline style or CSS animation
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(10px)';
+        card.style.transition = `all 0.3s ease ${index * 0.1}s`;
+
+        card.addEventListener('click', () => handleDishClick(r.name, r.missingIngredients || []));
+        list.appendChild(card);
+
+        // Trigger the animation
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 50);
     });
   }
   

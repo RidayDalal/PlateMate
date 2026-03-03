@@ -1,53 +1,83 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="en" data-theme="light"> <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kitchen Assistant</title>
+  <title>PlateMate — AI Kitchen Assistant</title>
+  
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="styles.css" />
-  <!-- Google Custom Search (optional) -->
-  <script async src="https://cse.google.com/cse.js?cx=46a33ce86849c488a"></script>
 </head>
-<body>
-  <div class="container">
-    <h1>Kitchen Assistant</h1>
-
-    <div class="input-section">
-      <h2>Enter Your Ingredients</h2>
-      <textarea id="ingredients" placeholder="Enter ingredients separated by commas (e.g., chicken, rice, tomatoes)"></textarea>
-
-      <!-- Diet –––––––––––––––––––––––––––––––––––– -->
-      <h2>Dietary Preference</h2>
-      <div class="radio-group" id="dietGroup">
-        <label><input type="radio" name="diet" value="veg" checked /> Veg</label>
-        <label><input type="radio" name="diet" value="non-veg" /> Non-veg</label>
-        <label><input type="radio" name="diet" value="vegan" /> Vegan</label>
+<body class="bg-slate-50 min-h-screen">
+  <div class="container mx-auto px-4 py-10 max-w-3xl">
+    
+    <div class="flex justify-between items-center mb-8">
+      <h1 class="text-4xl font-extrabold text-[#FF6B6B]">PlateMate</h1>
+      
+      <div class="dropdown dropdown-end">
+        <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar border border-slate-200">
+          <div class="w-10 rounded-full">
+            <img alt="User Profile" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Riday" />
+          </div>
+        </div>
+        <ul tabindex="0" class="mt-3 z-[1] p-2 shadow-lg menu menu-sm dropdown-content bg-base-100 rounded-xl w-52 border border-slate-100">
+          <li class="menu-title text-xs font-semibold uppercase opacity-50">Account</li>
+          <li><a class="py-2">Profile</a></li>
+          <li><a class="py-2">Saved Recipes</a></li>
+          <div class="divider my-0"></div>
+          <li><a class="text-error py-2">Logout</a></li>
+        </ul>
       </div>
-
-      <!-- Cuisine –––––––––––––––––––––––––––––––––– -->
-      <h2>Cuisine Type</h2>
-      <select id="cuisineSelect">
-        <option value="indian">Indian</option>
-        <option value="mexican">Mexican</option>
-        <option value="chinese">Chinese</option>
-        <option value="fast-food">Fast-food</option>
-        <option value="japanese">Japanese</option>
-      </select>
-
-      <!-- People ––––––––––––––––––––––––––––––––––– -->
-      <h2>Number of People</h2>
-      <div class="people-control">
-        <button id="minusBtn" type="button">−</button>
-        <span id="peopleCount">1</span>
-        <button id="plusBtn" type="button">+</button>
-      </div>
-
-      <button id="searchBtn">Find Recipes</button>
     </div>
 
-    <div id="recipesContainer" class="recipes-container">
-      <h2>Recommended Recipes</h2>
-      <div id="recipesList"></div>
+    <div class="input-section bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8">
+      <h2 class="text-lg font-bold mb-4 text-slate-700">What's in your fridge?</h2>
+      <textarea id="ingredients" class="textarea textarea-bordered w-full h-32 text-base focus:border-[#FF6B6B] mb-6" placeholder="Chicken, spinach, garlic..."></textarea>
+
+      <h2 class="text-lg font-bold mb-4 text-slate-700">Dietary Preference</h2>
+      <div class="grid grid-cols-3 gap-2 mb-6" id="dietGroup">
+        <label class="cursor-pointer">
+          <input type="radio" name="diet" value="veg" class="hidden peer" checked />
+          <div class="peer-checked:bg-[#FF6B6B] peer-checked:text-white bg-slate-100 text-slate-600 py-3 rounded-lg text-center font-bold transition-all">Veg</div>
+        </label>
+        <label class="cursor-pointer">
+          <input type="radio" name="diet" value="non-veg" class="hidden peer" />
+          <div class="peer-checked:bg-[#FF6B6B] peer-checked:text-white bg-slate-100 text-slate-600 py-3 rounded-lg text-center font-bold transition-all">Non-veg</div>
+        </label>
+        <label class="cursor-pointer">
+          <input type="radio" name="diet" value="vegan" class="hidden peer" />
+          <div class="peer-checked:bg-[#FF6B6B] peer-checked:text-white bg-slate-100 text-slate-600 py-3 rounded-lg text-center font-bold transition-all">Vegan</div>
+        </label>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 mb-8">
+        <div>
+          <h2 class="text-lg font-bold mb-2 text-slate-700">Cuisine</h2>
+          <select id="cuisineSelect" class="select select-bordered w-full">
+            <option value="indian">Indian</option>
+            <option value="mexican">Mexican</option>
+            <option value="chinese">Chinese</option>
+            <option value="japanese">Japanese</option>
+          </select>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold mb-2 text-slate-700">Servings</h2>
+          <div class="flex items-center justify-between border border-slate-300 rounded-lg p-2 h-[3rem]">
+            <button id="minusBtn" class="btn btn-xs btn-circle btn-ghost">−</button>
+            <span id="peopleCount" class="font-bold">1</span>
+            <button id="plusBtn" class="btn btn-xs btn-circle btn-ghost">+</button>
+          </div>
+        </div>
+      </div>
+
+      <button id="searchBtn" class="btn w-full bg-[#FF6B6B] hover:bg-[#ee5253] text-white border-none text-lg font-bold rounded-xl h-[3.5rem]">
+        Find Recipes
+      </button>
+    </div>
+
+    <div id="recipesContainer" class="recipes-container bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+      <h2 class="text-xl font-bold mb-6 text-slate-700">Suggested for You</h2>
+      <div id="recipesList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
     </div>
   </div>
 
