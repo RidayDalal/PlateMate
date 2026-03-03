@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kitchen Assistant</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Google Custom Search (optional) -->
+  <script async src="https://cse.google.com/cse.js?cx=46a33ce86849c488a"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>Kitchen Assistant</h1>
+
+    <div class="input-section">
+      <h2>Enter Your Ingredients</h2>
+      <textarea id="ingredients" placeholder="Enter ingredients separated by commas (e.g., chicken, rice, tomatoes)"></textarea>
+
+      <!-- Diet –––––––––––––––––––––––––––––––––––– -->
+      <h2>Dietary Preference</h2>
+      <div class="radio-group" id="dietGroup">
+        <label><input type="radio" name="diet" value="veg" checked /> Veg</label>
+        <label><input type="radio" name="diet" value="non-veg" /> Non-veg</label>
+        <label><input type="radio" name="diet" value="vegan" /> Vegan</label>
+      </div>
+
+      <!-- Cuisine –––––––––––––––––––––––––––––––––– -->
+      <h2>Cuisine Type</h2>
+      <select id="cuisineSelect">
+        <option value="indian">Indian</option>
+        <option value="mexican">Mexican</option>
+        <option value="chinese">Chinese</option>
+        <option value="fast-food">Fast-food</option>
+        <option value="japanese">Japanese</option>
+      </select>
+
+      <!-- People ––––––––––––––––––––––––––––––––––– -->
+      <h2>Number of People</h2>
+      <div class="people-control">
+        <button id="minusBtn" type="button">−</button>
+        <span id="peopleCount">1</span>
+        <button id="plusBtn" type="button">+</button>
+      </div>
+
+      <button id="searchBtn">Find Recipes</button>
+    </div>
+
+    <div id="recipesContainer" class="recipes-container">
+      <h2>Recommended Recipes</h2>
+      <div id="recipesList"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
