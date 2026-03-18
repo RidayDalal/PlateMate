@@ -1,32 +1,123 @@
-/* Custom Card Transitions */
+/* ── Brand palette ─────────────────────────────────────────────────────────
+   Terracotta red  : #C4573A   (basket / "Plate")
+   Forest green    : #4A7A35   ("Mate" / leaf)
+   Dark brown      : #3B1D0A   (outlines)
+   Warm cream bg   : #FDFAF6
+   Card border     : #EDE0D8
+────────────────────────────────────────────────────────────────────────── */
+
+/* ── Global ── */
+.pm-bg       { background-color: #FDFAF6; }
+.pm-red      { color: #C4573A; }
+.pm-green    { color: #4A7A35; }
+.pm-brown    { color: #3B1D0A; }
+.pm-red-text { color: #C4573A; }
+
+/* ── Card ── */
+.pm-card {
+  background: #ffffff;
+  border: 1px solid #EDE0D8;
+  border-radius: 1.25rem;
+  padding: 2rem;
+  box-shadow: 0 2px 12px rgba(59, 29, 10, 0.06);
+}
+
+/* ── Section labels ── */
+.pm-label {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #3B1D0A;
+  margin-bottom: 0.75rem;
+}
+
+/* ── Textarea focus ── */
+.pm-textarea:focus {
+  border-color: #C4573A !important;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(196, 87, 58, 0.15);
+}
+#ingredients.input-error {
+  border-color: #C4573A !important;
+  box-shadow: 0 0 0 3px rgba(196, 87, 58, 0.15);
+}
+
+/* ── Dietary restriction toggle pills ── */
+.diet-btn {
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  border: 1.5px solid #EDE0D8;
+  background: #FAF3EE;
+  color: #6b4c3b;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+}
+.diet-btn:hover {
+  border-color: #C4573A;
+  color: #C4573A;
+  background: #FFF2EE;
+}
+.diet-btn.selected {
+  background: #C4573A;
+  border-color: #C4573A;
+  color: #ffffff;
+}
+
+/* ── Select ── */
+.pm-select:focus {
+  border-color: #C4573A !important;
+  outline: none;
+}
+
+/* ── Servings stepper ── */
+.pm-stepper {
+  border: 1.5px solid #EDE0D8;
+  border-radius: 0.6rem;
+  padding: 0.5rem 0.75rem;
+}
+
+/* ── Primary button ── */
+.pm-btn-primary {
+  background-color: #C4573A;
+  transition: background-color 0.18s ease;
+}
+.pm-btn-primary:hover {
+  background-color: #A83D22;
+}
+
+/* ── Border helper ── */
+.pm-border { border-color: #EDE0D8 !important; }
+
+/* ── Recipe cards ── */
 .recipe-item {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    padding: 1.5rem;
-    border-radius: 12px;
-    text-align: center;
-    font-weight: 700;
-    color: #475569;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 80px;
+  background: #ffffff;
+  border: 1.5px solid #EDE0D8;
+  padding: 1.5rem;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 700;
+  color: #3B1D0A;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
 }
-
 .recipe-item:hover {
-    transform: translateY(-4px);
-    border-color: #FF6B6B;
-    box-shadow: 0 10px 15px -3px rgba(255, 107, 107, 0.1);
-    color: #FF6B6B;
+  transform: translateY(-4px);
+  border-color: #C4573A;
+  box-shadow: 0 10px 15px -3px rgba(196, 87, 58, 0.12);
+  color: #C4573A;
 }
 
-/* Fix for window.open content styling */
+/* ── Fix for window.open content ── */
 .recipe-content {
-    background: white;
-    padding: 2rem;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-    white-space: pre-wrap;
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  white-space: pre-wrap;
 }

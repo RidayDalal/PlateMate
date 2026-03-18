@@ -47,9 +47,14 @@ async function getAIResponse(messages) {
 /* HELPER – AI DISH GENERATION (Replaces Google Search)                       */
 /* ─────────────────────────────────────────────────────────────────────────── */
 async function searchDishes({ ingredients, diet, cuisine }) {
-  // Combine rules and user data into one string
+  const dietClause = diet
+    ? `STRICT REQUIREMENT: Every dish MUST be strictly ${diet}. Do NOT suggest any dish that contains or may contain ingredients forbidden under a ${diet} diet.`
+    : `No dietary restriction has been specified — suggest any dishes that fit the cuisine.`;
+
   const combinedPrompt = `You are a culinary expert. 
-  Suggest 5 to 8 popular ${cuisine} ${diet} dishes that can be made using: ${ingredients}. 
+  Suggest 5 to 8 popular ${cuisine} dishes that can be made using: ${ingredients}.
+  
+  ${dietClause}
   
   IMPORTANT: Return ONLY a raw JSON array of strings. No prose, no backticks. 
   Example: ["Paneer Butter Masala", "Dal Tadka"]`;
@@ -96,18 +101,23 @@ app.post('/find-recipes', async (req, res) => {
 /* ROUTE – EXPLAIN SELECTED DISH                                              */
 /* ─────────────────────────────────────────────────────────────────────────── */
 app.post('/explain-dish', async (req, res) => {
-  const { dish, inputIngredients = '' } = req.body;
+  const { dish, inputIngredients = '', diet = '' } = req.body;
+
+  const dietNote = diet
+    ? `The user follows a strict ${diet} diet — ensure ALL ingredients and substitutions are ${diet}-compliant.`
+    : '';
 
   const messages = [
     {
       role: 'user',
-      content: `Act as a helpful kitchen assistant. 
+      content: `Act as a helpful kitchen assistant.
       For the dish "${dish}", the user has these ingredients: ${inputIngredients || 'none'}.
+      ${dietNote}
       
       Please provide:
       • A brief description
       • Clear cooking steps
-      • Smart substitutions for a vegetarian alternative`
+      • Smart ingredient substitutions if needed`
     }
   ];
 
