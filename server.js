@@ -1,136 +1,300 @@
 import express from 'express';
 import * as dotenv from 'dotenv';
+import session from 'express-session';
+import bcrypt from 'bcryptjs';
+import pkg from 'pg';
+const { Pool } = pkg;
 
 dotenv.config();
 
 /* ─────────────────────────────────────────────────────────────────────────── */
-/* ENVIRONMENT                                                                */
+/* ENVIRONMENT & DATABASE SETUP                                               */
 /* ─────────────────────────────────────────────────────────────────────────── */
 const {
   OPENROUTER_API_KEY,
-  OR_MODEL_ID,
-  PORT = 3000
+  YOUTUBE_API,
+  OR_MODEL_ID = 'google/gemma-3n-e4b-it:free',
+  PORT = 3000,
+  DB_USER = 'postgres',
+  DB_PASSWORD = 'your_password',
+  DB_HOST = 'localhost',
+  DB_DATABASE = 'platemate',
+  SESSION_SECRET = 'platemate-fallback-secret'
 } = process.env;
 
-// Only checking for the OpenRouter key now
-if (!OPENROUTER_API_KEY) {
-  console.error('❌  OPENROUTER_API_KEY missing in .env');
+const pool = new Pool({
+  user: DB_USER,
+  host: DB_HOST,
+  database: DB_DATABASE,
+  password: DB_PASSWORD,
+  port: 5432,
+});
+
+if (!OPENROUTER_API_KEY || !YOUTUBE_API) {
+  console.error('❌ Missing API Keys in .env');
   process.exit(1);
 }
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-/* ─────────────────────────────────────────────────────────────────────────── */
-/* HELPER – CALL OPENROUTER CHAT ENDPOINT                                     */
-/* ─────────────────────────────────────────────────────────────────────────── */
+/* ── HELPER: YouTube Fetch with Postgres Cache & Optimized Query ─────────── */
+async function getRecipeVideo(dishName) {
+  try {
+    // 1. Check Cache (Use cleaned name)
+    const dbRes = await pool.query('SELECT video_id FROM recipe_requests WHERE recipe_name = $1', [dishName]);
+    if (dbRes.rows.length > 0 && dbRes.rows[0].video_id) {
+      console.log(`📦 Cache Hit: ${dishName}`);
+      return dbRes.rows[0].video_id;
+    }
+
+    // 2. Fetch from YouTube with Optimized "Step-by-Step" query
+    console.log(`🔍 YouTube API Fetch for: ${dishName}`);
+    const searchQuery = encodeURIComponent(`${dishName} recipe step by step tutorial`);
+    
+    // videoEmbeddable=true ensures the video can actually be played in your <iframe>
+    const ytRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${searchQuery}&key=${YOUTUBE_API}&maxResults=1&type=video&videoEmbeddable=true`
+    );
+    
+    const data = await ytRes.json();
+    const videoId = data.items?.[0]?.id?.videoId;
+
+    if (videoId) {
+      // 3. Save to Cache (Using UPSERT logic)
+      await pool.query(
+        `INSERT INTO recipe_requests (recipe_name, video_id) 
+         VALUES ($1, $2) 
+         ON CONFLICT (recipe_name) DO UPDATE SET video_id = EXCLUDED.video_id`,
+        [dishName, videoId]
+      );
+    }
+    return videoId;
+  } catch (err) {
+    console.error('⚠️ Video helper error:', err.message);
+    return null;
+  }
+}
+
+/* ── HELPER: AI Response ─────────────────────────────────────────────────── */
 async function getAIResponse(messages) {
   const res = await fetch(OPENROUTER_URL, {
-    method : 'POST',
+    method: 'POST',
     headers: {
-      Authorization : `Bearer ${OPENROUTER_API_KEY}`,
+      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      model      : OR_MODEL_ID || 'google/gemini-2.0-flash-001', // Defaulting to a fast model
-      messages,
-      max_tokens : 1000,
-      temperature: 0.7
-    })
+    body: JSON.stringify({ model: OR_MODEL_ID, messages, max_tokens: 1000, temperature: 0.7 })
   });
 
   if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${await res.text()}`);
+
   const data = await res.json();
   return data.choices?.[0]?.message?.content?.trim() || '';
 }
 
 /* ─────────────────────────────────────────────────────────────────────────── */
-/* HELPER – AI DISH GENERATION (Replaces Google Search)                       */
-/* ─────────────────────────────────────────────────────────────────────────── */
-async function searchDishes({ ingredients, diet, cuisine }) {
-  const dietClause = diet
-    ? `STRICT REQUIREMENT: Every dish MUST be strictly ${diet}. Do NOT suggest any dish that contains or may contain ingredients forbidden under a ${diet} diet.`
-    : `No dietary restriction has been specified — suggest any dishes that fit the cuisine.`;
-
-  const combinedPrompt = `You are a culinary expert. 
-  Suggest 5 to 8 popular ${cuisine} dishes that can be made using: ${ingredients}.
-  
-  ${dietClause}
-  
-  IMPORTANT: Return ONLY a raw JSON array of strings. No prose, no backticks. 
-  Example: ["Paneer Butter Masala", "Dal Tadka"]`;
-
-  const messages = [
-    { role: 'user', content: combinedPrompt }
-  ];
-
-  try {
-    const aiText = await getAIResponse(messages);
-    const cleanedText = aiText.replace(/```json|```/g, '').trim();
-    const dishNames = JSON.parse(cleanedText); 
-    
-    return dishNames.map(name => ({ name, missingIngredients: [] }));
-  } catch (err) {
-    console.error('⚠️ AI Generation failed:', err.message);
-    return [{ name: "Vegetable Curry", missingIngredients: [] }];
-  }
-}
-
-/* ─────────────────────────────────────────────────────────────────────────── */
-/* EXPRESS APP SETUP                                                          */
+/* EXPRESS ROUTES                                                              */
 /* ─────────────────────────────────────────────────────────────────────────── */
 const app = express();
 app.use(express.json());
-app.use(express.static('public')); 
+app.use(session({
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 }
+}));
+app.use(express.static('public'));
 
-/* ─────────────────────────────────────────────────────────────────────────── */
-/* ROUTE – FIND RECIPES                                                       */
-/* ─────────────────────────────────────────────────────────────────────────── */
 app.post('/find-recipes', async (req, res) => {
-  const { ingredients = '', diet = 'non-veg', cuisine = 'indian', people = 1 } = req.body;
+  const { ingredients, diet, cuisine } = req.body;
+  
+  // Prompting the AI to keep names short helps our Database Cache stay consistent
+  const prompt = `Suggest 5-8 popular ${cuisine} dishes using: ${ingredients}. Diet: ${diet}. 
+  IMPORTANT: Return ONLY a JSON array of short dish names (max 3 words each). No descriptions.`;
 
   try {
-    const recipes = await searchDishes({ ingredients, diet, cuisine });
-    res.json({ recipes, people });
+    const aiText = await getAIResponse([{ role: 'user', content: prompt }]);
+    const recipes = JSON.parse(aiText.replace(/```json|```/g, '')).map(name => ({ name }));
+    res.json({ recipes });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error generating recipe suggestions.' });
+    res.status(500).json({ recipes: [{ name: "Vegetable Curry" }] });
   }
 });
 
-/* ─────────────────────────────────────────────────────────────────────────── */
-/* ROUTE – EXPLAIN SELECTED DISH                                              */
-/* ─────────────────────────────────────────────────────────────────────────── */
 app.post('/explain-dish', async (req, res) => {
-  const { dish, inputIngredients = '', diet = '' } = req.body;
+  const { dish, inputIngredients, diet, includeVideo } = req.body;
 
-  const dietNote = diet
-    ? `The user follows a strict ${diet} diet — ensure ALL ingredients and substitutions are ${diet}-compliant.`
-    : '';
-
-  const messages = [
-    {
-      role: 'user',
-      content: `Act as a helpful kitchen assistant.
-      For the dish "${dish}", the user has these ingredients: ${inputIngredients || 'none'}.
-      ${dietNote}
-      
-      Please provide:
-      • A brief description
-      • Clear cooking steps
-      • Smart ingredient substitutions if needed`
-    }
-  ];
+  // Clean the dish name in case the AI added a description (e.g. "Dish Name: Description")
+  const cleanName = dish.split(':')[0].split(' - ')[0].trim();
 
   try {
-    const aiText = await getAIResponse(messages);
-    res.json({ message: aiText });
+    // Always fetch video (client can pass includeVideo:false to skip)
+    const videoTask = (includeVideo !== false) ? getRecipeVideo(cleanName) : Promise.resolve(null);
+    const aiTask = getAIResponse([{
+      role: 'user',
+      content: `Provide a recipe for "${dish}" using ${inputIngredients}. Diet: ${diet}. 
+      Include a brief description, clear cooking steps, and smart ingredient substitutions.`
+    }]);
+
+    const [videoId, message] = await Promise.all([videoTask, aiTask]);
+    res.json({ message, videoId });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Error generating AI response.' });
+    res.status(500).json({ message: "Failed to generate recipe content." });
   }
 });
 
 /* ─────────────────────────────────────────────────────────────────────────── */
+/* AUTH ROUTES                                                                 */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+app.post('/register', async (req, res) => {
+  const { name, email, password } = req.body;
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: 'Name, email, and password are required.' });
+  }
+
+  try {
+    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ error: 'An account with this email already exists.' });
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+    const result = await pool.query(
+      'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email',
+      [name.trim(), email.toLowerCase().trim(), hashed]
+    );
+
+    const user = result.rows[0];
+    req.session.userId = user.id;
+    res.json({ user: { id: user.id, name: user.name, email: user.email } });
+  } catch (err) {
+    console.error('Register error:', err);
+    res.status(500).json({ error: 'Registration failed.' });
+  }
+});
+
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required.' });
+  }
+
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    const user = result.rows[0];
+    const match = await bcrypt.compare(password, user.password_hash);
+    if (!match) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    req.session.userId = user.id;
+    res.json({ user: { id: user.id, name: user.name, email: user.email } });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Login failed.' });
+  }
+});
+
+app.post('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.clearCookie('connect.sid');
+    res.json({ ok: true });
+  });
+});
+
+app.get('/me', async (req, res) => {
+  if (!req.session.userId) {
+    return res.json({ user: null });
+  }
+  try {
+    const result = await pool.query('SELECT id, name, email FROM users WHERE id = $1', [req.session.userId]);
+    res.json({ user: result.rows[0] || null });
+  } catch {
+    res.json({ user: null });
+  }
+});
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* SAVED RECIPES ROUTES                                                        */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+app.post('/save-recipe', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Please log in to save recipes.' });
+  }
+
+  const { recipe_name } = req.body;
+  if (!recipe_name) return res.status(400).json({ error: 'Recipe name is required.' });
+
+  try {
+    await pool.query(
+      `INSERT INTO saved_recipes (user_id, recipe_name)
+       VALUES ($1, $2) ON CONFLICT (user_id, recipe_name) DO NOTHING`,
+      [req.session.userId, recipe_name.trim()]
+    );
+    res.json({ saved: true });
+  } catch (err) {
+    console.error('Save recipe error:', err);
+    res.status(500).json({ error: 'Failed to save recipe.' });
+  }
+});
+
+app.delete('/save-recipe', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Please log in.' });
+  }
+
+  const { recipe_name } = req.body;
+  try {
+    await pool.query(
+      'DELETE FROM saved_recipes WHERE user_id = $1 AND recipe_name = $2',
+      [req.session.userId, recipe_name.trim()]
+    );
+    res.json({ removed: true });
+  } catch (err) {
+    console.error('Unsave error:', err);
+    res.status(500).json({ error: 'Failed to remove recipe.' });
+  }
+});
+
+app.get('/saved-recipes', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Please log in.' });
+  }
+
+  try {
+    const result = await pool.query(
+      'SELECT id, recipe_name, saved_at FROM saved_recipes WHERE user_id = $1 ORDER BY saved_at DESC',
+      [req.session.userId]
+    );
+    res.json({ recipes: result.rows });
+  } catch (err) {
+    console.error('Fetch saved error:', err);
+    res.status(500).json({ error: 'Failed to load saved recipes.' });
+  }
+});
+
+app.get('/is-saved', async (req, res) => {
+  if (!req.session.userId) return res.json({ saved: false });
+
+  const { recipe_name } = req.query;
+  try {
+    const result = await pool.query(
+      'SELECT id FROM saved_recipes WHERE user_id = $1 AND recipe_name = $2',
+      [req.session.userId, recipe_name]
+    );
+    res.json({ saved: result.rows.length > 0 });
+  } catch {
+    res.json({ saved: false });
+  }
+});
+
 app.listen(PORT, () => {
-  console.log(`🚀  PlateMate running → http://localhost:${PORT}`);
+  console.log(`🚀 PlateMate running → http://localhost:${PORT}`);
 });
