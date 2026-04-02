@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your profile — PlateMate</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="pm-bg min-h-screen">
+  <header class="pm-app-header border-b pm-border bg-[#fffdf8]/95 backdrop-blur-sm sticky top-0 z-20">
+    <div class="container mx-auto px-4 max-w-3xl flex items-center justify-between py-3 gap-4">
+      <a href="/" class="pm-brand flex items-center gap-3 no-underline hover:opacity-90">
+        <img src="logo.png" alt="" class="h-9 w-auto" />
+        <span class="pm-brand-text text-xl"><span class="pm-red">Plate</span><span class="pm-green">Mate</span></span>
+      </a>
+      <a href="/" class="text-sm font-semibold pm-red-text hover:underline">← Back to kitchen</a>
+    </div>
+  </header>
+
+  <div id="authFlowLoadingOverlay" class="pm-auth-loading-overlay" aria-hidden="true">
+    <div class="pm-auth-loading-card">
+      <div class="pm-auth-loading-spinner" aria-hidden="true"></div>
+      <p id="authFlowLoadingMessage" class="pm-auth-loading-text">Please wait…</p>
+    </div>
+  </div>
+
+  <main class="container mx-auto px-4 py-10 max-w-3xl">
+    <div id="profileGate" class="hidden text-center py-16">
+      <p class="text-slate-600 mb-4">You need to be signed in to view your profile.</p>
+      <a href="/" class="pm-btn-primary btn text-white border-none rounded-xl px-6">Go to sign in</a>
+    </div>
+
+    <div id="profileLoading" class="text-center py-16 text-slate-500">Loading your profile…</div>
+
+    <div id="profileFormWrap" class="hidden">
+      <h1 class="text-2xl font-bold pm-brown mb-2">Your profile</h1>
+      <p class="text-sm text-slate-500 mb-8">Update your details below. Password cannot be changed here.</p>
+
+      <div id="profileFlash" class="hidden text-sm font-medium mb-4 p-3 rounded-xl"></div>
+
+      <form id="profileForm" class="pm-card space-y-6">
+        <div>
+          <label class="pm-label text-sm" for="profileName">Name</label>
+          <input id="profileName" name="name" type="text" autocomplete="name" required class="input input-bordered w-full pm-textarea" />
+        </div>
+
+        <div>
+          <label class="pm-label text-sm" for="profileEmail">Email</label>
+          <input id="profileEmail" name="email" type="email" autocomplete="email" required class="input input-bordered w-full pm-textarea" />
+        </div>
+
+        <div>
+          <label class="pm-label text-sm">Dietary restriction <span class="text-xs font-normal text-slate-400">(optional)</span></label>
+          <p class="text-xs text-slate-500 mb-2">Tap to select one, or tap again to clear.</p>
+          <div class="flex flex-wrap gap-2" id="profileDietGroup" role="group" aria-label="Dietary restriction">
+            <button type="button" class="signup-diet-pill" data-value="vegetarian">🥦 Vegetarian</button>
+            <button type="button" class="signup-diet-pill" data-value="halal">☪️ Halal</button>
+            <button type="button" class="signup-diet-pill" data-value="vegan">🌱 Vegan</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="pm-label text-sm">Allergies <span class="text-xs font-normal text-slate-400">(optional, multi-select)</span></label>
+          <p class="text-xs text-slate-500 mb-2">Select any that apply. Leave none selected if you have no allergies on file.</p>
+          <div class="pm-allergy-grid" id="profileAllergyGroup">
+            <button type="button" class="allergy-pill" data-value="Peanuts">Peanuts</button>
+            <button type="button" class="allergy-pill" data-value="Dairy">Dairy</button>
+            <button type="button" class="allergy-pill" data-value="Gluten">Gluten</button>
+            <button type="button" class="allergy-pill" data-value="Shellfish">Shellfish</button>
+            <button type="button" class="allergy-pill" data-value="Soy">Soy</button>
+            <button type="button" class="allergy-pill" data-value="Tree Nuts">Tree Nuts</button>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-3 pt-2">
+          <button type="submit" id="profileSaveBtn" class="pm-btn-primary btn text-white border-none rounded-xl px-8 font-bold">
+            Save changes
+          </button>
+          <button type="button" id="profileLogoutBtn" class="btn btn-outline border pm-border rounded-xl">
+            Log out
+          </button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script src="auth-loading.js"></script>
+  <script src="profile.js"></script>
+</body>
+</html>

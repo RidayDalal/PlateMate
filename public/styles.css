@@ -177,8 +177,212 @@ html, body {
   box-shadow: 0 0 0 3px rgba(199, 108, 74, 0.16);
 }
 
-/* ── Dietary restriction toggle pills ── */
-.diet-btn {
+/* ── Gated auth gate (editorial / Framer-adjacent) ── */
+.pm-auth-gate {
+  background: linear-gradient(165deg, #f6f0e8 0%, #eef3ec 45%, #f6f0e8 100%);
+}
+.pm-auth-split {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 1024px) {
+  .pm-auth-split {
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+  }
+}
+.pm-auth-brand {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2.5rem 2rem 2rem;
+  background: linear-gradient(145deg, #2f3c2e 0%, #3d4f3a 50%, #2a3528 100%);
+  color: #f6f0e8;
+}
+
+/* Uniform square frame; asset scales inside without stretching */
+.pm-auth-logo {
+  width: 15rem;
+  height: 15rem;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  flex-shrink: 0;
+}
+@media (min-width: 1024px) {
+  .pm-auth-brand {
+    padding: 3.5rem 3.5rem 4rem;
+  }
+}
+.pm-auth-kicker {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(199, 215, 196, 0.85);
+  margin-bottom: 1rem;
+}
+.pm-auth-headline {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.85rem, 4vw, 2.75rem);
+  font-weight: 600;
+  line-height: 1.2;
+  color: #fffaf4;
+  margin-bottom: 1.25rem;
+}
+.pm-auth-headline-accent {
+  color: #c7d7c4;
+}
+.pm-auth-lede {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: rgba(246, 240, 232, 0.82);
+  max-width: 28rem;
+}
+.pm-auth-form-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem 3rem;
+  background: #f6f0e8;
+}
+@media (min-width: 1024px) {
+  .pm-auth-form-wrap {
+    padding: 3rem 2.5rem;
+  }
+}
+.pm-auth-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem 1.75rem;
+  border-radius: 1.25rem;
+}
+.pm-auth-toggle-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  padding: 0.25rem;
+  margin-bottom: 1.75rem;
+  background: #ede5d8;
+  border-radius: 999px;
+}
+.pm-auth-tab {
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  padding: 0.55rem 1rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #5f554d;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.pm-auth-tab:hover {
+  color: #c76c4a;
+}
+.pm-auth-tab--active {
+  background: #fffdf8;
+  color: #2f3c2e;
+  box-shadow: 0 2px 8px rgba(47, 60, 46, 0.08);
+}
+.pm-app-header .pm-brand-text {
+  font-family: 'Playfair Display', serif;
+}
+
+a.pm-brand {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Auth login / logout loading overlay (avoid Tailwind .hidden conflict) */
+.pm-auth-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(45, 37, 32, 0.45);
+  backdrop-filter: blur(6px);
+  padding: 1.5rem;
+}
+.pm-auth-loading-overlay.is-visible {
+  display: flex;
+}
+body.pm-auth-loading-active {
+  overflow: hidden;
+}
+.pm-auth-loading-card {
+  background: #fffdf8;
+  border: 1.5px solid #d9cfbf;
+  border-radius: 1.1rem;
+  padding: 2rem 2.25rem;
+  max-width: 20rem;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(47, 60, 46, 0.18);
+}
+.pm-auth-loading-spinner {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 1.25rem;
+  border: 4px solid #ede5d8;
+  border-top-color: #c76c4a;
+  border-radius: 50%;
+  animation: pm-auth-spin 0.85s linear infinite;
+}
+@keyframes pm-auth-spin {
+  to { transform: rotate(360deg); }
+}
+.pm-auth-loading-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2f3c2e;
+  line-height: 1.45;
+}
+
+/* Allergy pills (sign-up multi-select) */
+.pm-allergy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+@media (min-width: 400px) {
+  .pm-allergy-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.allergy-pill {
+  padding: 0.45rem 0.65rem;
+  border-radius: 999px;
+  border: 1.5px solid #cfc4b6;
+  background: #f7efe4;
+  color: #5f554d;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+  text-align: center;
+}
+.allergy-pill:hover {
+  border-color: #4a5b48;
+  color: #2f3c2e;
+  background: #e8efe4;
+}
+.allergy-pill.selected {
+  background: #2f3c2e;
+  border-color: #2f3c2e;
+  color: #f6f0e8;
+}
+
+/* ── Dietary restriction toggle pills (legacy dashboard) + sign-up diet + recipe mode cards ── */
+.diet-btn,
+.signup-diet-pill,
+.recipe-mode-card {
   padding: 0.5rem 1.1rem;
   border-radius: 999px;
   border: 1.5px solid #cfc4b6;
@@ -190,15 +394,25 @@ html, body {
   transition: all 0.18s ease;
   font-family: inherit;
 }
-.diet-btn:hover {
+.diet-btn:hover,
+.signup-diet-pill:hover,
+.recipe-mode-card:hover {
   border-color: #c76c4a;
   color: #c76c4a;
   background: #fbece5;
 }
-.diet-btn.selected {
+.diet-btn.selected,
+.signup-diet-pill.selected,
+.recipe-mode-card.selected {
   background: #c76c4a;
   border-color: #c76c4a;
   color: #ffffff;
+}
+
+/* Wider recipe-mode tiles (not circular pills) */
+.recipe-mode-card {
+  border-radius: 0.9rem;
+  text-align: left;
 }
 
 /* ── Select ── */
