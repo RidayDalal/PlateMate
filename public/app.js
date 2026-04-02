@@ -5,7 +5,7 @@ let currentUser = null;
 
 async function checkAuth() {
   try {
-    const res = await fetch('/me');
+    const res = await fetch('/me'); 
     const { user } = await res.json();
     currentUser = user;
     updateAuthUI();
