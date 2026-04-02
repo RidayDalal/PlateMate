@@ -3,6 +3,7 @@ import * as dotenv from 'dotenv';
 import session from 'express-session';
 import bcrypt from 'bcryptjs';
 import pkg from 'pg';
+import * as youtubeTranscript from 'youtube-transcript/dist/youtube-transcript.esm.js';
 const { Pool } = pkg;
 
 dotenv.config();
@@ -37,6 +38,16 @@ if (!OPENROUTER_API_KEY || !YOUTUBE_API) {
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
+function parseYouTubeDurationToSeconds(isoDuration = '') {
+  const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 0;
+
+  const hours = Number(match[1] || 0);
+  const minutes = Number(match[2] || 0);
+  const seconds = Number(match[3] || 0);
+  return (hours * 3600) + (minutes * 60) + seconds;
+}
+
 /* ── HELPER: YouTube Fetch with Postgres Cache & Optimized Query ─────────── */
 async function getRecipeVideo(dishName) {
   try {
@@ -53,11 +64,25 @@ async function getRecipeVideo(dishName) {
     
     // videoEmbeddable=true ensures the video can actually be played in your <iframe>
     const ytRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${searchQuery}&key=${YOUTUBE_API}&maxResults=1&type=video&videoEmbeddable=true`
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${searchQuery}&key=${YOUTUBE_API}&maxResults=8&type=video&videoEmbeddable=true&videoDuration=medium`
     );
     
     const data = await ytRes.json();
-    const videoId = data.items?.[0]?.id?.videoId;
+    const candidateIds = (data.items || [])
+      .map(item => item?.id?.videoId)
+      .filter(Boolean);
+
+    if (candidateIds.length === 0) return null;
+
+    const detailsRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${candidateIds.join(',')}&key=${YOUTUBE_API}`
+    );
+    const detailsData = await detailsRes.json();
+
+    const MIN_VIDEO_SECONDS = 4 * 60;
+    const videoId = (detailsData.items || [])
+      .find(item => parseYouTubeDurationToSeconds(item?.contentDetails?.duration) > MIN_VIDEO_SECONDS)
+      ?.id || null;
 
     if (videoId) {
       // 3. Save to Cache (Using UPSERT logic)
@@ -90,6 +115,26 @@ async function getAIResponse(messages) {
 
   const data = await res.json();
   return data.choices?.[0]?.message?.content?.trim() || '';
+}
+
+async function getVideoTranscript(videoId) {
+  if (!videoId) return '';
+
+  try {
+    const transcript = await youtubeTranscript.fetchTranscript(videoId);
+    if (!Array.isArray(transcript) || transcript.length === 0) return '';
+
+    // Keep token usage predictable while preserving step-level context.
+    return transcript
+      .map(line => line.text)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 5000);
+  } catch (err) {
+    console.warn(`⚠️ Transcript unavailable for ${videoId}:`, err.message);
+    return '';
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────── */
@@ -128,15 +173,41 @@ app.post('/explain-dish', async (req, res) => {
   const cleanName = dish.split(':')[0].split(' - ')[0].trim();
 
   try {
-    // Always fetch video (client can pass includeVideo:false to skip)
-    const videoTask = (includeVideo !== false) ? getRecipeVideo(cleanName) : Promise.resolve(null);
-    const aiTask = getAIResponse([{
-      role: 'user',
-      content: `Provide a recipe for "${dish}" using ${inputIngredients}. Diet: ${diet}. 
-      Include a brief description, clear cooking steps, and smart ingredient substitutions.`
-    }]);
+    let videoId = null;
+    let message = '';
 
-    const [videoId, message] = await Promise.all([videoTask, aiTask]);
+    if (includeVideo !== false) {
+      // Video-first flow keeps the recipe aligned with the shown video.
+      videoId = await getRecipeVideo(cleanName);
+      const transcriptText = await getVideoTranscript(videoId);
+
+      const videoPrompt = transcriptText
+        ? `You are given a YouTube recipe transcript for "${cleanName}".
+Use this transcript as the PRIMARY source and create a clean, structured recipe.
+Transcript:
+"""${transcriptText}"""
+
+User constraints:
+- Preferred/available ingredients: ${inputIngredients || 'not specified'}
+- Diet: ${diet || 'none'}
+
+Output requirements:
+- Keep the method faithful to the transcript's technique and order.
+- If transcript is noisy, refine wording but do not invent a different dish.
+- Include: short description, ingredients list, numbered cooking steps, and practical substitutions that preserve the same recipe style.`
+        : `Provide a recipe for "${dish}" using ${inputIngredients}. Diet: ${diet}.
+No transcript was available from the selected video, so generate a high-quality standard recipe.
+Include a brief description, clear cooking steps, and smart ingredient substitutions.`;
+
+      message = await getAIResponse([{ role: 'user', content: videoPrompt }]);
+    } else {
+      message = await getAIResponse([{
+        role: 'user',
+        content: `Provide a recipe for "${dish}" using ${inputIngredients}. Diet: ${diet}. 
+        Include a brief description, clear cooking steps, and smart ingredient substitutions.`
+      }]);
+    }
+
     res.json({ message, videoId });
   } catch (err) {
     console.error(err);
